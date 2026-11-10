@@ -1,0 +1,157 @@
+// Field notes for interview prep. Each topic: short, dense, with live-API pointers.
+import * as P from './poke'
+
+export const TOPICS = {
+  basics: {
+    title: 'Species vs. Pokémon vs. form',
+    level: 0,
+    lines: [
+      'The single most useful distinction in PokeAPI (and a great nerd-cred talking point):',
+      '  {y|pokemon-species/25}  the "dex entry": names, genus, flavor text, evolution chain,',
+      '                      egg groups, gender rate, capture rate, is_legendary / is_mythical / is_baby.',
+      '  {y|pokemon/25}          a battle-ready {p|variety}: types, base stats, abilities, moves, sprites, cries.',
+      '                      one species → many varieties: {$|dex charizard-mega-x}, {$|dex raichu-alola}.',
+      '  {y|pokemon-form/…}      cosmetic/minor forms (Unown letters, Vivillon patterns, Alcremie sweets).',
+      '',
+      'National Pokédex: species are numbered by debut — #001 Bulbasaur … #1025 Pecharunt (Gen IX).',
+      'Regional variants (Alolan, Galarian, Hisuian, Paldean) are extra varieties of the same species.',
+      'Legendary ≠ Mythical: mythicals (Mew, Celebi, Jirachi…) were historically event-only distributions.',
+    ],
+    try: ['dex 25', 'curl pokemon-species/25 .varieties', 'dex 151'],
+    quiz: 'whos',
+  },
+  types: {
+    title: 'Types & effectiveness',
+    level: 0,
+    lines: [
+      '18 types. {t-dark|Dark} and {t-steel|Steel} arrived in Gen II, {t-fairy|Fairy} in Gen VI.',
+      'Multipliers: {r|2×} super effective · {g|½×} not very effective · {v|0×} no effect. Dual types {p|multiply}: 4×, ¼×.',
+      '',
+      '{h|The 8 immunities} (memorize these!):',
+      '  {t-normal|Normal} & {t-fighting|Fighting} → {t-ghost|Ghost}     {t-ghost|Ghost} → {t-normal|Normal}      {t-electric|Electric} → {t-ground|Ground}',
+      '  {t-ground|Ground} → {t-flying|Flying}            {t-psychic|Psychic} → {t-dark|Dark}      {t-poison|Poison} → {t-steel|Steel}',
+      '  {t-dragon|Dragon} → {t-fairy|Fairy}',
+      '',
+      '{y|STAB} (Same-Type Attack Bonus): 1.5× when move type = user type (2× with Adaptability / Tera).',
+      'Abilities can override the chart: Levitate, Flash Fire, Volt Absorb, Sap Sipper, Wonder Guard…',
+      'History: in Gen VI Steel lost its Ghost & Dark resistances → {$|curl type/steel .past_damage_relations}',
+      'Gen IX: Terastallization replaces your defensive type with the Tera Type (incl. the special Stellar type).',
+    ],
+    try: ['type fairy', 'weak gyarados', 'weak shedinja'],
+    quiz: 'type',
+  },
+  stats: {
+    title: 'Base stats, IVs, EVs',
+    level: 1,
+    lines: [
+      'Six stats: HP · Attack · Defense · Sp. Atk · Sp. Def · Speed. Their sum = {y|BST}.',
+      'Actual stat at level L (Gen III+):',
+      '  {c|HP    = ⌊(2·Base + IV + ⌊EV/4⌋) · L / 100⌋ + L + 10}',
+      '  {c|other = ⌊(⌊(2·Base + IV + ⌊EV/4⌋) · L / 100⌋ + 5) · Nature⌋}',
+      '{y|IVs}: 0–31 per stat, the "genes". Hyper Training (Gen VII) maxes them for battle.',
+      '{y|EVs}: earned by battling; 252 max per stat, 510 total (Gen VI+). 4 EVs = 1 stat point at L100.',
+      '{y|Nature}: ×1.1 one stat, ×0.9 another (HP never). See {$|learn natures}.',
+      'In-battle {y|stages} go −6…+6: +1 = 1.5×, +2 = 2×, … +6 = 4×.',
+      'Trivia: Shedinja always has 1 HP · Blissey has 255 base HP · Shuckle has 230 Def/SpD and 5 Atk/Spe.',
+    ],
+    try: ['compare garchomp salamence', 'dex shuckle', 'curl pokemon/242 .stats'],
+    quiz: 'stat',
+  },
+  evolution: {
+    title: 'Evolution methods',
+    level: 1,
+    lines: [
+      'PokeAPI: {y|species.evolution_chain.url} → a tree of {y|evolves_to[]} with {y|evolution_details[]}.',
+      'Triggers: level-up · use-item · trade · shed · spin · three-critical-hits · take-damage · other…',
+      'Conditions stack: friendship, time of day, location, held item, known move, party member, gender, weather.',
+      '',
+      '  level        Charmander → Charmeleon (16)',
+      '  stone        Pikachu + Thunder Stone → Raichu',
+      '  trade        Kadabra → Alakazam · Onix holding Metal Coat → Steelix · Karrablast ⇄ Shelmet',
+      '  friendship   Golbat → Crobat · Eevee → Espeon (day) / Umbreon (night)',
+      '  weird        Inkay: console upside down · Galarian Farfetch\'d: 3 crits in one battle',
+      '',
+      'Eevee has 8 branches. Baby Pokémon (Pichu, Cleffa…) arrived in Gen II, cross-gen evos in Gen IV.',
+      'Mega Evolution (VI) and Gigantamax (VIII) are battle-only transformations — varieties, not evolutions.',
+    ],
+    try: ['evo eevee', 'evo wurmple', 'evo inkay', 'evo tyrogue'],
+    quiz: 'evo',
+  },
+  natures: {
+    title: 'Natures',
+    level: 2,
+    lines: [
+      '25 natures (Gen III+). 20 boost one stat ×1.1 and drop another ×0.9; HP is never touched.',
+      '5 are neutral (same stat up and down): Hardy, Docile, Serious, Bashful, Quirky.',
+      'Competitive staples: {y|Adamant} +Atk −SpA · {y|Jolly} +Spe −SpA · {y|Modest} +SpA −Atk · {y|Timid} +Spe −Atk',
+      '                     {y|Bold} +Def −Atk · {y|Impish} +Def −SpA · {y|Calm} +SpD −Atk · {y|Careful} +SpD −SpA',
+      'Mints (Gen VIII) change the stat effect but not the displayed nature.',
+      'Flavor link: spicy=Atk · sour=Def · dry=SpA · bitter=SpD · sweet=Spe (likes the boosted stat\'s flavor).',
+    ],
+    try: ['nature'],
+    quiz: null,
+  },
+  abilities: {
+    title: 'Abilities',
+    level: 3,
+    lines: [
+      'Introduced in Gen III. Each Pokémon has 1–2 regular abilities, often plus one {p|Hidden Ability} (Gen V, Dream World).',
+      'Ability Capsule swaps between the regular two; Ability Patch (Gen VIII) switches to/from the hidden one.',
+      'Famous ones: Intimidate (−1 Atk to foes) · Huge Power (doubles Atk, Azumarill) · Wonder Guard (Shedinja)',
+      '             Drought/Drizzle (weather setters) · Protean/Libero (type changes to the move used).',
+      'PokeAPI: {y|pokemon.abilities[].is_hidden}, and {y|ability/<name>} lists effects plus every Pokémon that has it.',
+    ],
+    try: ['curl ability/intimidate .effect_entries', 'dex azumarill'],
+    quiz: 'ability',
+  },
+  moves: {
+    title: 'Moves',
+    level: 3,
+    lines: [
+      'Damage class: {y|physical} (Atk vs Def) · {y|special} (SpA vs SpD) · {y|status} (no direct damage).',
+      'The {p|physical/special split} came in Gen IV — before that, the category depended on the move\'s type.',
+      'Priority −7…+5: Helping Hand +5 · Protect +4 · Fake Out +3 · Extreme Speed +2 · Quick Attack +1 · Trick Room −7.',
+      'Max 4 moves. Learned via level-up, TM, egg moves, tutors — {y|pokemon.moves[].version_group_details[].move_learn_method}.',
+      'Gimmicks: Z-Moves (VII) · Max/G-Max Moves (VIII) · Tera Blast (IX).',
+    ],
+    try: ['curl move/fake-out .priority', 'curl move/tackle .past_values'],
+    quiz: 'move',
+  },
+  generations: {
+    title: 'Generations & regions',
+    level: 0,
+    lines: () => [
+      ...P.GEN_INFO.map((g) => `  {y|${('Gen ' + g.roman).padEnd(8)}} ${g.region.padEnd(7)} {d|${g.year}} ${g.games}`),
+      '',
+      'Each generation adds species, often a gimmick (abilities III, phys/spec split IV, Mega VI, Z VII, Dynamax VIII, Tera IX).',
+    ],
+    try: ['gen', 'gen 4'],
+    quiz: 'flavor',
+  },
+  api: {
+    title: 'PokeAPI itself',
+    level: 0,
+    lines: [
+      'Base URL {c|https://pokeapi.co/api/v2/} — REST, JSON, read-only, no auth. Fair use: cache everything.',
+      'Every resource: {y|/<endpoint>/<id or name>}. List endpoints paginate: {y|?limit=20&offset=40}',
+      '  → {d|count, next, previous, results: [ name, url ]}',
+      'Resources link to each other by {y|url} — follow them (species → evolution_chain).',
+      'Localized data lives in {y|names[]}, {y|flavor_text_entries[]}, {y|effect_entries[]} with a language field.',
+      'Sprites are served from the PokeAPI/sprites GitHub repo; cries as .ogg ({$|cry pikachu}).',
+      'This shell caches every response in memory. Turn on {$|verbose on} to see each request.',
+    ],
+    try: ['curl pokemon?limit=3', 'curl pokemon/pikachu .cries', 'verbose on'],
+    quiz: null,
+  },
+}
+
+export function topicLines(key) {
+  const t = TOPICS[key]
+  const body = typeof t.lines === 'function' ? t.lines() : t.lines
+  return [
+    `{h|━━ ${t.title} ━━}  {d|man 7 ${key}}`,
+    ...body,
+    '',
+    `{d|try:} ${t.try.map((c) => `{$|${c}}`).join('{d| · }')}` + (t.quiz ? `   {d|quiz:} {$|play ${t.quiz}}` : ''),
+  ]
+}
