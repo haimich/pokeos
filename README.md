@@ -3,6 +3,8 @@
 A fake Linux terminal for exploring the Pokémon world, built with Vue 3 + Vite on [PokeAPI](https://pokeapi.co/docs/v2).
 Pinkmare color palette. Meant as interview prep: it starts gentle and gets nerdier as you rank up.
 
+![pokéOS: a "Who's that Pokémon?" round in the terminal, with the revealed Pokédex card on the right](docs/screenshot.png)
+
 ```bash
 npm install
 npm run dev
